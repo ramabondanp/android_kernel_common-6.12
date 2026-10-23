@@ -1176,8 +1176,16 @@ static inline void blk_flush_plug(struct blk_plug *plug, bool async)
 
 static __always_inline void blk_plug_invalidate_ts(void)
 {
+	/*
+	 * PF_BLOCK_TS may outlive current->plug: blk_finish_plug() clears the
+	 * plug without touching the flag when the plug being finished is not
+	 * the current one.  The previous version dereferenced
+	 * current->plug->cur_ktime unconditionally and crashed with a NULL
+	 * pointer dereference in __schedule() when preempted there.
+	 */
 	if (unlikely(current->flags & PF_BLOCK_TS)) {
-		current->plug->cur_ktime = 0;
+		if (current->plug)
+			current->plug->cur_ktime = 0;
 		current->flags &= ~PF_BLOCK_TS;
 	}
 }
