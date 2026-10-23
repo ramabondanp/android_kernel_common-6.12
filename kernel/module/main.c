@@ -1440,6 +1440,22 @@ static int verify_exported_symbols(struct module *mod)
 				.gplok	= true,
 			};
 			if (find_symbol(&fsa)) {
+				/*
+				 * Android: tolerate a vendor module re-exporting
+				 * a symbol that the kernel also exports.  Kernel
+				 * symbol tables are always searched first, so the
+				 * kernel's copy shadows the module's duplicate and
+				 * symbol resolution stays deterministic.  Required
+				 * for modules built against a non-GKI kernel that
+				 * export helpers this kernel also provides (e.g.
+				 * MediaTek's blocktag.ko on MT6895).
+				 */
+				if (fsa.owner == NULL) {
+					pr_warn("%s: exports symbol %s also exported by the kernel (ignoring)\n",
+						mod->name,
+						kernel_symbol_name(s));
+					continue;
+				}
 				pr_err("%s: exports duplicate symbol %s"
 				       " (owned by %s)\n",
 				       mod->name, kernel_symbol_name(s),
