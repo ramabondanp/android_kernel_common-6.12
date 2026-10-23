@@ -1,0 +1,22 @@
+[abi_symbol_list]
+# Android: keep this symbol exported for modules built against an older
+# GKI release that remain in system_dlkm (e.g. generic zram.ko from gen 5).
+  kernel_read_file_from_path
+# Android: the MT6895 blocktag.ko in the device vendor_boot ramdisk exports
+# these UFS/MMC/mictx hook symbols and the prebuilt UFS/MMC/perf modules import
+# them.  vmlinux provides no-op compat stubs (kernel/mtk_blocktag_stubs.c) so
+# the vendor modules resolve them without entering the incompatible vendor
+# code; keep the names in the permitted import list.
+  mmc_mtk_biolog_check
+  mmc_mtk_biolog_exit
+  mmc_mtk_biolog_init
+  mmc_mtk_biolog_send_command
+  mmc_mtk_biolog_transfer_req_compl
+  mtk_btag_mictx_get_data
+  mtk_btag_mictx_register
+  mtk_btag_mictx_unregister
+  mtk_btag_ufs_exit
+  mtk_btag_ufs_init
+  mtk_btag_ufs_send_command
+  mtk_btag_ufs_transfer_req_compl
+  set_mmc_perf_mode
