@@ -49,6 +49,19 @@ ANDROID_KABI_DECLONLY(reclaim_state);
 #include "blk-mq-sched.h"
 #include "blk-rq-qos.h"
 
+/*
+ * The prebuilt android16-5 vendor storage modules derive the request from a
+ * scsi_cmnd with blk_mq_rq_from_pdu() arithmetic hard-coded to 0x120 bytes.
+ * Keep the padding added to include/linux/blk-mq.h from being dropped.  The
+ * size only means anything for the GKI configuration those modules were
+ * built against, so gate the check on the options that place fields ahead of
+ * the padding.
+ */
+#if defined(CONFIG_BLK_RQ_ALLOC_TIME) && defined(CONFIG_BLK_WBT) && \
+	defined(CONFIG_BLK_INLINE_ENCRYPTION)
+static_assert(sizeof(struct request) == 0x120);
+#endif
+
 static DEFINE_PER_CPU(struct llist_head, blk_cpu_done);
 static DEFINE_PER_CPU(call_single_data_t, blk_cpu_csd);
 static DEFINE_MUTEX(blk_mq_cpuhp_lock);

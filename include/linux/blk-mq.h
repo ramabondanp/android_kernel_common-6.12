@@ -157,6 +157,20 @@ struct request {
 	struct blk_crypto_keyslot *crypt_keyslot;
 #endif
 
+	/*
+	 * ABI compatibility with the android16-5 GKI branch (6.12.38):
+	 * prebuilt vendor modules (MTK ufs-mediatek-mod, blocktag, rpmb)
+	 * were compiled against a struct request that still had the
+	 * write_hint/ioprio fields here, i.e. sizeof(struct request) ==
+	 * 0x120.  They derive the request from a scsi_cmnd by subtracting
+	 * that constant (blk_mq_rq_from_pdu() math) and then access fields
+	 * such as rq->bio.  Keep both the size and every trailing field
+	 * offset identical to the 6.12.38 layout so those modules resolve
+	 * the correct fields instead of crashing on stale offsets.
+	 */
+	u8 __abi_compat_write_hint;
+	u16 __abi_compat_ioprio;
+
 	enum mq_rq_state state;
 	atomic_t ref;
 
