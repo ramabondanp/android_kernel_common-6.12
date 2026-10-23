@@ -68,8 +68,17 @@ int check_version(const struct load_info *info,
 	return 1;
 
 bad_version:
-	pr_warn("%s: disagrees about version of symbol %s\n", info->name, symname);
+	pr_warn("%s: disagrees about version of symbol %s (ignoring)\n",
+		info->name, symname);
+#ifdef CONFIG_MODULE_FORCE_LOAD
+	/*
+	 * Android: allow modules from an older system_dlkm (e.g. bluetooth.ko /
+	 * Wi-Fi) to load even if a symbol CRC changed between GKI releases.
+	 */
+	return 1;
+#else
 	return 0;
+#endif
 }
 
 int check_modstruct_version(const struct load_info *info,
