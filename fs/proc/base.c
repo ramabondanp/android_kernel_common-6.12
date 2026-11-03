@@ -2360,6 +2360,8 @@ static struct dentry *proc_map_files_lookup(struct inode *dir,
 		goto out_put_task;
 
 	mm = mm_access(task, PTRACE_MODE_READ_FSCREDS);
+	if (!mm)
+		mm = ERR_PTR(-ESRCH);
 	if (IS_ERR(mm)) {
 		result = ERR_CAST(mm);
 		goto out_put_task;
@@ -2418,6 +2420,8 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
 		goto out_put_task;
 
 	mm = mm_access(task, PTRACE_MODE_READ_FSCREDS);
+	if (!mm)
+		mm = ERR_PTR(-ESRCH);
 	if (IS_ERR(mm)) {
 		ret = PTR_ERR(mm);
 		/* if the task has no mm, the directory should just be empty */
