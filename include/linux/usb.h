@@ -745,7 +745,6 @@ struct usb_device {
 	unsigned reset_resume:1;
 	unsigned port_is_suspended:1;
 	enum usb_link_tunnel_mode tunnel_mode;
-	struct device_link *usb4_link;
 
 	int slot_id;
 	struct usb2_lpm_parameters l1_params;
@@ -761,7 +760,7 @@ struct usb_device {
 		unsigned offload_pm_locked:1;
 	});
 	ANDROID_KABI_USE(2, int offload_usage);
-	ANDROID_KABI_RESERVE(3);
+	ANDROID_KABI_USE(3, struct device_link *usb4_link);
 	ANDROID_KABI_RESERVE(4);
 };
 
