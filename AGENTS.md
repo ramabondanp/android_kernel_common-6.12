@@ -74,6 +74,11 @@ awk '/name = "kernel_aarch64",/{f=1} f&&/^\)/{exit} f' BUILD.bazel \
 	|| echo "not enforced (good)"
 # and both bypass strings must be present in the built image
 strings out/vmlinux | grep -c '(ignoring)'
+
+# 6. usb4_link must sit in the KABI tail, never between tunnel_mode and
+#    slot_id. The gen5 xhci-mtk module writes slot_id using the old offsets.
+toolchain/build-tools/bin/pahole -C usb_device out/vmlinux |
+	grep -E 'tunnel_mode|usb4_link|slot_id'
 ```
 
 Byte-level backstop for (2), if the source check looks right but the device
@@ -147,6 +152,28 @@ clearing the flag. AOSP `android16-6.12` never took the offending commit and
 keeps a NULL-safe form — a useful reference when a rebase carries the bug
 again.
 
+**6. `usb4_link` must live in the KABI reserve.**
+The LTS merge carries `7d24fae116cf` ("UPSTREAM: usb: acpi: fix device link
+removal"), which stores the USB4 host-interface device link in
+`struct usb_device` between `tunnel_mode` and `slot_id`. That shifts
+`slot_id`, the LPM parameter blocks and every later field by eight bytes.
+The gen5 modules are built against the pre-fix layout: `xhci-mtk-hcd-v2.ko`
+assigns `udev->slot_id` (1 for the first device), which lands on
+`usb4_link`, and `usb_disconnect()` then feeds that integer to
+`device_link_del()`:
+
+```
+Unable to handle kernel NULL pointer dereference at 0x3c5
+pc : device_link_del+0x20/0xcc
+  usb_disconnect+0x1dc
+  hub_event
+```
+
+Seen on unplugging a USB-OTG drive. Google originally reverted the upstream
+commit for exactly this ABI break; the merge re-introduced it. Keep the
+pointer in `ANDROID_KABI_USE(3, ...)` at the end of the struct. Never insert
+it before `slot_id`.
+
 ## Moving to a newer LTS / AOSP base
 
 Cherry-pick the local fixes onto the new base rather than merging. A merge
@@ -199,6 +226,7 @@ Map symptoms to invariants — the first three are the historical crashes:
 | NULL deref in `ufs_rpmb_vh_compl_command` | invariant 1 |
 | `INFO: task ... blocked for more than N seconds` | invariant 2; capture the blocked task's stack, compare with `___rmqueue_pcplist` / `page_cache_ra_unbounded` |
 | a module fails to load | vermagic, CRC warnings, invariant 3, symbol present in `android-dlkm-compat` |
+| NULL deref in `device_link_del` from `usb_disconnect` on USB unplug | invariant 6; confirm `xhci-mtk-hcd-v2.ko` is loaded |
 
 A good run: boots to the home screen, `/data` encryption works, no bad-page
 report, and no blocked-task warning under swap/readahead pressure. The
