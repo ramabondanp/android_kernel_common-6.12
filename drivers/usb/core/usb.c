@@ -51,6 +51,15 @@
 #include <linux/android_kabi.h>
 ANDROID_KABI_DECLONLY(trace_eval_map);
 
+/*
+ * The prebuilt android16-5 xhci-mtk-hcd-v2 module assigns usb_device::slot_id
+ * using the old offsets.  usb4_link must stay in the KABI tail: inserted
+ * before slot_id it shifts slot_id, the LPM parameter blocks and every later
+ * field, and usb_disconnect() then hands the slot ID to device_link_del().
+ */
+static_assert(offsetof(struct usb_device, slot_id) == 1488);
+static_assert(offsetof(struct usb_device, usb4_link) == 1560);
+
 const char *usbcore_name = "usbcore";
 
 static bool nousb;	/* Disable USB when built into kernel image */
