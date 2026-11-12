@@ -1248,7 +1248,6 @@ struct task_struct {
 
 	enum blocked_on_state		blocked_on_state;
 	struct mutex			*blocked_on;    /* left to preserve KABI */
-	struct blocked_on_lock		blocked_on_l;	/* lock we're blocked on */
 	struct task_struct		*blocked_donor;	/* task that is boosting this task */
 	struct list_head		migration_node;
 #ifdef CONFIG_SCHED_PROXY_EXEC
@@ -1659,6 +1658,17 @@ struct task_struct {
 	ANDROID_KABI_RESERVE(6);
 	ANDROID_KABI_RESERVE(7);
 	ANDROID_KABI_RESERVE(8);
+
+	/*
+	 * Android: blocked_on_l is newer than the android16-5 KMI the prebuilt
+	 * MT6895 vendor modules were built against.  Keep it below every field
+	 * those modules dereference so the older offsets are preserved:
+	 * cgroups at 0xb38 and android_vendor_data1 at 0xcf8.  The padding
+	 * keeps sizeof(struct task_struct) at 0x1440, which is the
+	 * android_task_vendor_data() offset the vendor scheduler.ko expects.
+	 */
+	struct blocked_on_lock		blocked_on_l;
+	u8				__abi_compat_task_pad[0x200];
 
 #ifdef CONFIG_RV
 	/*

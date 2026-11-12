@@ -126,6 +126,20 @@
 #include <trace/hooks/sched.h>
 #include <trace/hooks/dtask.h>
 #include <trace/hooks/mm.h>
+
+/*
+ * Android: the prebuilt MT6895 vendor modules (scheduler.ko and friends)
+ * were built against the android16-5 task_struct layout.  Keep the offsets
+ * they dereference fixed at compile time; see the blocked_on_l and
+ * __abi_compat_task_pad comment in include/linux/sched.h.
+ */
+#if defined(CONFIG_ARM64) && defined(CONFIG_GKI_DYNAMIC_TASK_STRUCT_SIZE) && \
+	defined(CONFIG_CGROUPS)
+static_assert(sizeof(struct task_struct) == 0x1440);
+static_assert(offsetof(struct task_struct, cgroups) == 0xb38);
+static_assert(offsetof(struct task_struct, android_vendor_data1) == 0xcf8);
+#endif
+
 /*
  * Minimum number of threads to boot the kernel
  */

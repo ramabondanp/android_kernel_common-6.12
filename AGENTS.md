@@ -183,6 +183,27 @@ commit for exactly this ABI break; the merge re-introduced it. Keep the
 pointer in `ANDROID_KABI_USE(3, ...)` at the end of the struct. Never insert
 it before `slot_id`.
 
+**7. `struct task_struct` must keep the android16-5 vendor layout.**
+`blocked_on_l` was added by `bbb8ae42fd12` after the vendor modules were
+built and sits before `cgroups`, shifting every later field by 16 bytes.
+The prebuilt `scheduler.ko` was compiled against `cgroups` at 0xb38 and
+`android_vendor_data1` at 0xcf8; with the newer layout it read
+`mems_allowed` (value 1) as `p->cgroups` and oopsed from
+`sched_pause_init()` during its own init:
+
+```
+Unable to handle kernel NULL pointer dereference at virtual address 0x9
+pc : mtk_find_energy_efficient_cpu+0x17c/0x29c4 [scheduler]
+```
+
+`blocked_on_l` is kernel-internal, so it lives in the KABI tail in
+`include/linux/sched.h`; `__abi_compat_task_pad[0x200]` restores
+`sizeof(struct task_struct) == 0x1440`, so `android_task_vendor_data()`
+(p + 1) matches the offset the vendor build uses for its dynamic vendor
+area. `kernel/fork.c` has compile-time asserts for the size, `cgroups`
+and `android_vendor_data1` offsets — keep them passing when the base
+moves.
+
 ## Moving to a newer LTS / AOSP base
 
 Cherry-pick the local fixes onto the new base rather than merging. A merge
