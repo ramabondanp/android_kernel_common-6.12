@@ -125,12 +125,21 @@ Four relaxations, all required: `CONFIG_MODULE_FORCE_LOAD` in
 a module re-exporting a kernel-owned symbol in `kernel/module/main.c`; drop
 `protected_module_names_list` for the arm64 GKI target in `BUILD.bazel`.
 
-**4. Blocktag symbols must resolve.**
+**4. Blocktag symbols must resolve, and `blocktag.ko` must never run.**
 `blocktag.ko` and friends need `mtk_btag_*`, `mmc_mtk_biolog_*` and
 `set_mmc_perf_mode`. Provided as no-op GPL stubs in
 `kernel/mtk_blocktag_stubs.c`, exported via
 `gki/aarch64/symbols/android-dlkm-compat`, which also carries
-`kernel_read_file_from_path` for older `system_dlkm` modules.
+`kernel_read_file_from_path` for older `system_dlkm` modules. The stubs
+only cover calls through its exported hooks; the module's own
+`block_bio_queue` tracepoint probe dereferences the vendor 6.12.38
+`struct request` and oopses in `btag_trace_block_bio_queue+0x90` during
+the first UFS scan. Rejecting the module is not an option: every client
+lists `blocktag` in `depends=`, so modprobe would skip the storage stack.
+It is on the built-in inert list in `kernel/module/main.c` instead: the
+ELF loads and its exports stay registered (shadowed by the stubs), but
+`init_module()`/`cleanup_module()` are never called and no tracepoints or
+procfs entries are created.
 
 **5. `blk_plug_invalidate_ts()` must be NULL-safe.**
 An LTS-only regression (`1fbc2d576370`, upstream `fad156c2af22`) moved the
@@ -239,6 +248,7 @@ Capture logs from `/sys/fs/pstore/console-ramoops*` or the MTK AEE dump.
 
 - `disagrees about version of symbol ... (ignoring)` — CRC bypass working.
 - `exports symbol ... also exported by the kernel (ignoring)` — blocktag dupes.
+- `blocktag: incompatible vendor module; init/exit suppressed` — inert load working.
 - `proc_register` WARN from `tran_usb_extcon_probe` — duplicate proc entry.
 - `rust_binder.ko` fails to load — old module, not needed.
 

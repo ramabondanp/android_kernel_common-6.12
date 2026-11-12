@@ -12,9 +12,10 @@
  * no-op replacements from vmlinux.  find_symbol() always searches the kernel
  * symbol tables before module exports, so the dependent vendor modules
  * (ufs-mediatek-mod, mtk-mmc-mod, cqhci, mtk-mmc-dbg, mtk_perf_common) bind to
- * these stubs and never reach the vendor code.  blocktag.ko itself still
- * loads; its duplicate exports are tolerated and shadowed, and its procfs/
- * tracepoint based logging keeps working.
+ * these stubs and never reach the vendor code.  blocktag.ko itself still loads
+ * so that modprobe can satisfy their depends= entries, but the loader
+ * suppresses its init/exit (see the inert list in kernel/module/main.c): its
+ * block_bio_queue tracepoint probe and procfs logging are never registered.
  *
  * Return values mirror the "feature disabled" behaviour of the originals:
  *  - mtk_btag_ufs_init() returns NULL, which makes the ufs-mediatek-mod

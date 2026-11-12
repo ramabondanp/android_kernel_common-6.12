@@ -2844,6 +2844,40 @@ static bool blacklisted(const char *module_name)
 }
 core_param(module_blacklist, module_blacklist, charp, 0400);
 
+/*
+ * Android: vendor modules that must load so that modprobe can satisfy the
+ * dependencies of other modules, but whose own init code is incompatible with
+ * this kernel.
+ *
+ * blocktag.ko (MT6895) registers a block_bio_queue tracepoint probe from its
+ * init routine.  The probe was built against the vendor 6.12.38 layout of
+ * struct request and oopses during the first UFS scan:
+ *
+ *   pc : btag_trace_block_bio_queue+0x90/0x1f0 [blocktag]
+ *
+ * The vmlinux compat stubs shadow the module's exported hooks, but they cannot
+ * stop its self-registered tracepoints from firing.  Rejecting the module is
+ * not an option either: every vendor storage module lists blocktag in its
+ * depends=, and modprobe refuses to load a module whose dependency failed, so
+ * the UFS root device would never appear.
+ *
+ * Keep the ELF loaded and its exports registered (clients keep resolving to
+ * the stubs), but never execute the vendor init/exit code.
+ */
+static const char * const inert_module_names[] = {
+	"blocktag",
+};
+
+static bool module_is_inert(const char *module_name)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(inert_module_names); i++)
+		if (!strcmp(module_name, inert_module_names[i]))
+			return true;
+	return false;
+}
+
 static struct module *layout_and_allocate(struct load_info *info, int flags)
 {
 	struct module *mod;
@@ -3016,10 +3050,22 @@ static noinline int do_init_module(struct module *mod)
 	freeinit->init_data = mod->mem[MOD_INIT_DATA].base;
 	freeinit->init_rodata = mod->mem[MOD_INIT_RODATA].base;
 
-	do_mod_ctors(mod);
-	/* Start the module */
-	if (mod->init != NULL)
-		ret = do_one_initcall(mod->init);
+	if (module_is_inert(mod->name)) {
+		/*
+		 * Never run vendor code: clearing both hooks skips init_module()
+		 * below and prevents cleanup_module() from touching state that
+		 * was never initialized.
+		 */
+		mod->init = NULL;
+		mod->exit = NULL;
+		pr_warn("%s: incompatible vendor module; init/exit suppressed\n",
+			mod->name);
+	} else {
+		do_mod_ctors(mod);
+		/* Start the module */
+		if (mod->init != NULL)
+			ret = do_one_initcall(mod->init);
+	}
 	if (ret < 0) {
 		goto fail_free_freeinit;
 	}
