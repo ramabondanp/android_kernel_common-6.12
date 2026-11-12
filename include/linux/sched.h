@@ -866,7 +866,6 @@ struct task_struct {
 	int				wake_cpu;
 #endif
 	int				on_rq;
-	int				is_blocked;
 
 	int				prio;
 	int				static_prio;
@@ -1248,7 +1247,6 @@ struct task_struct {
 
 	enum blocked_on_state		blocked_on_state;
 	struct mutex			*blocked_on;    /* left to preserve KABI */
-	struct blocked_on_lock		blocked_on_l;	/* lock we're blocked on */
 	struct task_struct		*blocked_donor;	/* task that is boosting this task */
 	struct list_head		migration_node;
 #ifdef CONFIG_SCHED_PROXY_EXEC
@@ -1696,7 +1694,20 @@ struct task_struct {
 	 * structure.  It *MUST* be at the end of 'task_struct'.
 	 *
 	 * Do not put anything below here!
+	 *
+	 * Android exception (arm64 only): the prebuilt MT6895 vendor modules
+	 * were built against android16-5, whose task_struct has thread at
+	 * 0xda0 (the vendor cpu_switch_to uses `mov x10, #0xda0`).  The
+	 * kernel-internal blocked_on_l and is_blocked are newer than that
+	 * KMI, so keep them below thread to preserve the vendor offset; the
+	 * padding keeps sizeof(struct task_struct) at 0x1440, which is the
+	 * android_task_vendor_data() (p + 1) offset of the vendor build.
+	 * arm64 thread_struct is fixed-size, so the x86 caveat above does
+	 * not apply.
 	 */
+	struct blocked_on_lock		blocked_on_l;
+	int				is_blocked;
+	u8				__abi_compat_task_pad[0x1fc];
 };
 
 #ifdef CONFIG_SCHED_PROXY_EXEC
