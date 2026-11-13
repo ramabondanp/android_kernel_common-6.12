@@ -41,6 +41,8 @@ Notes that are easy to get wrong:
   for forward-declared types and the Rust build fails.
 - Keep `CONFIG_DEFAULT_HUNG_TASK_TIMEOUT` out of `gki_defconfig`. It is a
   diagnostic knob only.
+- Keep `CONFIG_BLK_DEV_THROTTLING` off (invariant 8); the prebuilt UFS
+  module wakes `request_queue::mq_freeze_wq` directly.
 
 ## Verify before flashing
 
@@ -79,6 +81,28 @@ strings out/vmlinux | grep -c '(ignoring)'
 #    slot_id. The gen5 xhci-mtk module writes slot_id using the old offsets.
 toolchain/build-tools/bin/pahole -C usb_device out/vmlinux |
 	grep -E 'tunnel_mode|usb4_link|slot_id'
+
+# 7. task_struct / sched_entity must keep the android16-5 offsets the
+#    prebuilt scheduler and cpufreq_sugov_ext modules dereference.
+toolchain/build-tools/bin/pahole -C task_struct out/vmlinux |
+	grep -E '\b(prio|cpus_ptr|cgroups|android_vendor_data1)\b'
+# expect prio 148, cpus_ptr 1376, cgroups 2872, android_vendor_data1 3320
+toolchain/build-tools/bin/pahole -C task_struct out/vmlinux | grep 'size:'
+# expect 5184
+toolchain/build-tools/bin/pahole -C sched_entity out/vmlinux |
+	grep -E '\b(cfs_rq|vprot)\b'
+# expect cfs_rq 160, vprot 184
+# kernel/fork.c asserts these at build time
+
+# 8. request_queue::mq_freeze_wq must stay at 0x3b8 for the UFS timer.
+toolchain/build-tools/bin/pahole -C request_queue out/vmlinux |
+	grep mq_freeze_wq
+# expect 952; block/blk-core.c asserts it at build time and
+# CONFIG_BLK_DEV_THROTTLING must stay off
+
+# 9. blocktag must load but never run its init
+strings out/vmlinux | grep -c 'incompatible vendor module; init/exit suppressed'
+# expect 1
 ```
 
 Byte-level backstop for (2), if the source check looks right but the device
@@ -289,7 +313,7 @@ the AOSP build-tools do ship `lz4` and `avbtool`.
 The resulting image goes to the `boot` partition and carries no ramdisk — the
 `vendor_boot` ramdisk supplies the modules.
 
-Map symptoms to invariants — the first three are the historical crashes:
+Map symptoms to invariants:
 
 | Symptom | Look at |
 |---|---|
@@ -298,11 +322,15 @@ Map symptoms to invariants — the first three are the historical crashes:
 | `INFO: task ... blocked for more than N seconds` | invariant 2; capture the blocked task's stack, compare with `___rmqueue_pcplist` / `page_cache_ra_unbounded` |
 | a module fails to load | vermagic, CRC warnings, invariant 3, symbol present in `android-dlkm-compat` |
 | NULL deref in `device_link_del` from `usb_disconnect` on USB unplug | invariant 6; confirm `xhci-mtk-hcd-v2.ko` is loaded |
+| oops at address `0x9` in `mtk_find_energy_efficient_cpu+0x17c` during module load | invariant 7; `cgroups` moved off 0xb38 |
+| `task_h_load+0x8` or `mtk_effective_cpu_util_total+0x170` oops | invariant 7; `sched_entity`/`prio` offsets |
+| `__wake_up+0x60` from `rq_timer_fn` after screen-off/resume | invariant 8; `mq_freeze_wq` moved off 0x3b8 |
 
 A good run: boots to the home screen, `/data` encryption works, no bad-page
-report, and no blocked-task warning under swap/readahead pressure. The
-original repro needed a few minutes of ordinary app use, not a special
-trigger, so a short boot is not proof.
+report, no blocked-task warning under swap/readahead pressure, and a
+screen-off/idle period resumes without a wakeup oops. The original repro
+needed a few minutes of ordinary app use, not a special trigger, so a short
+boot is not proof.
 
 Capture logs from `/sys/fs/pstore/console-ramoops*` or the MTK AEE dump.
 
@@ -311,6 +339,9 @@ Capture logs from `/sys/fs/pstore/console-ramoops*` or the MTK AEE dump.
 - `disagrees about version of symbol ... (ignoring)` — CRC bypass working.
 - `exports symbol ... also exported by the kernel (ignoring)` — blocktag dupes.
 - `blocktag: incompatible vendor module; init/exit suppressed` — inert load working.
+- `btag host init failed, 0` — blocktag stub returned NULL; UFS skips its hooks.
+- `[Size check ok] boot_arg=512, mtk_task=488` / `no share_buck err_code=-22` —
+  vendor scheduler init.
 - `proc_register` WARN from `tran_usb_extcon_probe` — duplicate proc entry.
 - `rust_binder.ko` fails to load — old module, not needed.
 
