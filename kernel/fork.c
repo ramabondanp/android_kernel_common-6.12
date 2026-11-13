@@ -143,6 +143,9 @@ static_assert(offsetof(struct task_struct, nr_cpus_allowed) == 0x558);
 static_assert(offsetof(struct task_struct, cpus_ptr) == 0x560);
 static_assert(offsetof(struct task_struct, cgroups) == 0xb38);
 static_assert(offsetof(struct task_struct, android_vendor_data1) == 0xcf8);
+static_assert(offsetof(struct task_struct, se) == 0xc0);
+static_assert(offsetof(struct sched_entity, cfs_rq) == 0xa0);
+static_assert(sizeof(struct sched_entity) == 0x140);
 #endif
 
 /*

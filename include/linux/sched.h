@@ -565,8 +565,6 @@ struct sched_entity {
 	u64				vruntime;
 	/* Approximated virtual lag: */
 	s64				vlag;
-	/* 'Protected' deadline, to give out minimum quantums: */
-	u64				vprot;
 	u64				slice;
 
 	u64				nr_migrations;
@@ -581,6 +579,14 @@ struct sched_entity {
 	/* cached value of my_q->h_nr_running */
 	unsigned long			runnable_weight;
 #endif
+
+	/*
+	 * Android: vprot is newer than the android16-5 vendor build.  Keep it
+	 * after runnable_weight so parent/cfs_rq/my_q keep the older offsets;
+	 * the prebuilt scheduler.ko task_h_load() reads se.cfs_rq at 0x160.
+	 * 'Protected' deadline, to give out minimum quantums:
+	 */
+	u64				vprot;
 
 #ifdef CONFIG_SMP
 	/*
