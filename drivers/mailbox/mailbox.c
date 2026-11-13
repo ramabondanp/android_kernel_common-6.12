@@ -21,6 +21,16 @@
 
 #include "mailbox.h"
 
+/*
+ * Prebuilt android16-5 mailbox controller modules allocate struct
+ * mbox_chan arrays with the vendor layout.  tx_status fits in the
+ * existing hole after txdone_method, so active_req and every later
+ * field keep their vendor offsets.
+ */
+static_assert(sizeof(struct mbox_chan) == 248);
+static_assert(offsetof(struct mbox_chan, tx_status) == 12);
+static_assert(offsetof(struct mbox_chan, active_req) == 56);
+
 static LIST_HEAD(mbox_cons);
 static DEFINE_MUTEX(con_mutex);
 

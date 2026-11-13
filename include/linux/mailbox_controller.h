@@ -122,9 +122,9 @@ struct mbox_controller {
 struct mbox_chan {
 	struct mbox_controller *mbox;
 	unsigned txdone_method;
+	int tx_status;
 	struct mbox_client *cl;
 	struct completion tx_complete;
-	int tx_status;
 	void *active_req;
 	unsigned msg_count, msg_free;
 	void *msg_data[MBOX_TX_QUEUE_LEN];
