@@ -28,6 +28,15 @@
 #include <net/netns/generic.h>
 
 /*
+ * Prebuilt android16-5 GKI modules (ppp_generic, ...) provide their own
+ * struct pernet_operations, so struct_id/size must stay at the vendor
+ * offsets.
+ */
+static_assert(offsetof(struct pernet_operations, id) == 56);
+static_assert(offsetof(struct pernet_operations, size) == 64);
+static_assert(sizeof(struct pernet_operations) == 72);
+
+/*
  *	Our network namespace constructor/destructor lists
  */
 
@@ -164,51 +173,16 @@ static void ops_pre_exit_list(const struct pernet_operations *ops,
 	}
 }
 
-static void ops_exit_rtnl_list(const struct list_head *ops_list,
-			       const struct pernet_operations *ops,
-			       struct list_head *net_exit_list)
-{
-	const struct pernet_operations *saved_ops = ops;
-	LIST_HEAD(dev_kill_list);
-	struct net *net;
-
-	rtnl_lock();
-
-	list_for_each_entry(net, net_exit_list, exit_list) {
-		__rtnl_net_lock(net);
-
-		ops = saved_ops;
-		list_for_each_entry_continue_reverse(ops, ops_list, list) {
-			if (ops->exit_rtnl)
-				ops->exit_rtnl(net, &dev_kill_list);
-		}
-
-		__rtnl_net_unlock(net);
-	}
-
-	ops = saved_ops;
-	list_for_each_entry_continue_reverse(ops, ops_list, list) {
-		if (ops->exit_batch_rtnl)
-			ops->exit_batch_rtnl(net_exit_list, &dev_kill_list);
-	}
-
-	unregister_netdevice_many(&dev_kill_list);
-
-	rtnl_unlock();
-}
-
 static void ops_exit_list(const struct pernet_operations *ops,
 			  struct list_head *net_exit_list)
 {
+	struct net *net;
 	if (ops->exit) {
-		struct net *net;
-
 		list_for_each_entry(net, net_exit_list, exit_list) {
 			ops->exit(net);
 			cond_resched();
 		}
 	}
-
 	if (ops->exit_batch)
 		ops->exit_batch(net_exit_list);
 }
@@ -249,8 +223,18 @@ static void ops_undo_list(const struct list_head *ops_list,
 	else
 		synchronize_rcu();
 
-	if (hold_rtnl)
-		ops_exit_rtnl_list(ops_list, saved_ops, net_exit_list);
+	if (hold_rtnl) {
+		LIST_HEAD(dev_kill_list);
+
+		ops = saved_ops;
+		rtnl_lock();
+		list_for_each_entry_continue_reverse(ops, ops_list, list) {
+			if (ops->exit_batch_rtnl)
+				ops->exit_batch_rtnl(net_exit_list, &dev_kill_list);
+		}
+		unregister_netdevice_many(&dev_kill_list);
+		rtnl_unlock();
+	}
 
 	ops = saved_ops;
 	list_for_each_entry_continue_reverse(ops, ops_list, list)
@@ -264,7 +248,7 @@ static void ops_undo_list(const struct list_head *ops_list,
 static void ops_undo_single(struct pernet_operations *ops,
 			    struct list_head *net_exit_list)
 {
-	bool hold_rtnl = ops->exit_rtnl || ops->exit_batch_rtnl;
+	bool hold_rtnl = !!ops->exit_batch_rtnl;
 	LIST_HEAD(ops_list);
 
 	list_add(&ops->list, &ops_list);
