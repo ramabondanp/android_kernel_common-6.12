@@ -44,6 +44,17 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gpio.h>
 
+/*
+ * The prebuilt android16-5 pinctrl modules embed struct gpio_chip
+ * (struct mtk_pinctrl::chip) and pass it to this gpiolib.  Keep the
+ * vendor layout; set_rv/set_multiple_rv live in the KABI reserve slots
+ * so they do not grow the struct or shift the fields gpiolib writes.
+ */
+static_assert(sizeof(struct gpio_chip) == 0x278);
+static_assert(offsetof(struct gpio_chip, set_config) == 0x70);
+static_assert(offsetof(struct gpio_chip, set_rv) == 0x268);
+static_assert(offsetof(struct gpio_chip, irq) == 0x120);
+
 /* Implementation infrastructure for GPIO interfaces.
  *
  * The GPIO programming interface allows for inlining speed-critical
