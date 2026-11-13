@@ -965,10 +965,6 @@ struct mm_struct {
 		 */
 		seqcount_t mm_lock_seq;
 #endif
-#ifdef CONFIG_FUTEX
-		atomic64_t futex_unique_id;
-#endif
-
 
 		unsigned long hiwater_rss; /* High-watermark of RSS usage */
 		unsigned long hiwater_vm;  /* High-water virtual memory usage */
@@ -1103,7 +1099,7 @@ struct mm_struct {
 #endif /* CONFIG_LRU_GEN_WALKS_MMU */
 
 		ANDROID_KABI_USE(1, struct task_dma_buf_info *dmabuf_info);
-		ANDROID_KABI_RESERVE(2);
+		ANDROID_KABI_USE(2, atomic64_t futex_unique_id);
 
 		/* For 'struct ptshare_desc* ptshare_desc' */
 		ANDROID_BACKPORT_RESERVE(1);
