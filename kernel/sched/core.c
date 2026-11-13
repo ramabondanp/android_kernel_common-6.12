@@ -6725,8 +6725,7 @@ static inline void schedule_debug(struct task_struct *prev, bool preempt)
 	schedstat_inc(this_rq()->sched_count);
 }
 
-static void prev_balance(struct rq *rq, struct task_struct *prev,
-			 struct rq_flags *rf)
+static void prev_balance(struct rq *rq, struct rq_flags *rf)
 {
 	const struct sched_class *start_class = rq->donor->sched_class;
 	const struct sched_class *class;
@@ -6762,7 +6761,7 @@ static void prev_balance(struct rq *rq, struct task_struct *prev,
  * Pick up the highest-prio task:
  */
 static inline struct task_struct *
-__pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
+__pick_next_task(struct rq *rq, struct rq_flags *rf)
 {
 	const struct sched_class *class;
 	struct task_struct *p;
@@ -6774,7 +6773,7 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 
 	/*
 	 * Optimization: we know that if all tasks are in the fair class we can
-	 * call that function directly, but only if the @prev task wasn't of a
+	 * call that function directly, but only if the current task wasn't of a
 	 * higher scheduling class, because otherwise those lose the
 	 * opportunity to pull in more work from other CPUs.
 	 */
@@ -6795,7 +6794,7 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	}
 
 restart:
-	prev_balance(rq, rq->donor, rf);
+	prev_balance(rq, rf);
 
 	for_each_active_class(class) {
 		if (class->pick_next_task) {
@@ -6855,7 +6854,7 @@ extern void task_vruntime_update(struct rq *rq, struct task_struct *p, bool in_f
 static void queue_core_balance(struct rq *rq);
 
 static struct task_struct *
-pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
+pick_next_task(struct rq *rq, struct rq_flags *rf)
 {
 	struct task_struct *next, *p, *max = NULL;
 	const struct cpumask *smt_mask;
@@ -6867,7 +6866,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	bool need_sync;
 
 	if (!sched_core_enabled(rq))
-		return __pick_next_task(rq, prev, rf);
+		return __pick_next_task(rq, rf);
 
 	cpu = cpu_of(rq);
 
@@ -6880,7 +6879,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 		 */
 		rq->core_pick = NULL;
 		rq->core_dl_server = NULL;
-		return __pick_next_task(rq, prev, rf);
+		return __pick_next_task(rq, rf);
 	}
 
 	/*
@@ -6904,7 +6903,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 		goto out_set_next;
 	}
 
-	prev_balance(rq, prev, rf);
+	prev_balance(rq, rf);
 
 	smt_mask = cpu_smt_mask(cpu);
 	need_sync = !!rq->core->core_cookie;
@@ -7299,9 +7298,9 @@ static inline void sched_core_cpu_deactivate(unsigned int cpu) {}
 static inline void sched_core_cpu_dying(unsigned int cpu) {}
 
 static struct task_struct *
-pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
+pick_next_task(struct rq *rq, struct rq_flags *rf)
 {
-	return __pick_next_task(rq, prev, rf);
+	return __pick_next_task(rq, rf);
 }
 
 #endif /* CONFIG_SCHED_CORE */
@@ -7866,7 +7865,7 @@ static void __sched notrace __schedule(int sched_mode)
 
 	trace_sched_start_task_selection(prev, cpu, task_is_blocked(prev));
 pick_again:
-	next = pick_next_task(rq, rq->donor, &rf);
+	next = pick_next_task(rq, &rf);
 	if (sched_proxy_exec()) {
 		struct task_struct *prev_donor = rq->donor;
 
