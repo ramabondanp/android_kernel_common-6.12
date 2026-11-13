@@ -1545,8 +1545,8 @@ static ssize_t writeback_store(struct device *dev,
 			       const char *buf, size_t len)
 {
 	struct zram *zram = dev_to_zram(dev);
-	u64 nr_pages = zram->disksize >> PAGE_SHIFT;
-	unsigned long lo = 0, hi = nr_pages;
+	u64 nr_pages;
+	unsigned long lo = 0, hi;
 	struct zram_pp_ctl *pp_ctl = NULL;
 	struct zram_wb_ctl *wb_ctl = NULL;
 	char *args, *param, *val;
@@ -1558,6 +1558,9 @@ static ssize_t writeback_store(struct device *dev,
 		up_read(&zram->init_lock);
 		return -EINVAL;
 	}
+
+	nr_pages = zram->disksize >> PAGE_SHIFT;
+	hi = nr_pages;
 
 	/* Do not permit concurrent post-processing actions. */
 	if (atomic_xchg(&zram->pp_in_progress, 1)) {
@@ -1872,7 +1875,7 @@ static ssize_t read_block_state(struct file *file, char __user *buf,
 	char *kbuf;
 	ssize_t index, written = 0;
 	struct zram *zram = file->private_data;
-	unsigned long nr_pages = zram->disksize >> PAGE_SHIFT;
+	unsigned long nr_pages;
 	struct timespec64 ts;
 
 	kbuf = kvmalloc(count, GFP_KERNEL);
@@ -1885,6 +1888,8 @@ static ssize_t read_block_state(struct file *file, char __user *buf,
 		kvfree(kbuf);
 		return -EINVAL;
 	}
+
+	nr_pages = zram->disksize >> PAGE_SHIFT;
 
 	for (index = *ppos; index < nr_pages; index++) {
 		int copied;
