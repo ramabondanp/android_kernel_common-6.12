@@ -34,6 +34,16 @@
 #include <linux/ethtool_netlink.h>
 #include "common.h"
 
+/*
+ * Prebuilt android16-5 network drivers provide struct ethtool_ops.
+ * Keep the vendor layout: the new RXFH field callbacks live in the
+ * KABI reserve slots.
+ */
+static_assert(sizeof(struct ethtool_ops) == 656);
+static_assert(offsetof(struct ethtool_ops, create_rxfh_context) == 328);
+static_assert(offsetof(struct ethtool_ops, get_rxfh_fields) == 624);
+static_assert(offsetof(struct ethtool_ops, set_rxfh_fields) == 632);
+
 /* State held across locks and calls for commands which have devlink fallback */
 struct ethtool_devlink_compat {
 	struct devlink *devlink;
