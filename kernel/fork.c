@@ -136,6 +136,10 @@
 #if defined(CONFIG_ARM64) && defined(CONFIG_GKI_DYNAMIC_TASK_STRUCT_SIZE) && \
 	defined(CONFIG_CGROUPS)
 static_assert(sizeof(struct task_struct) == 0x1440);
+static_assert(offsetof(struct task_struct, prio) == 0x94);
+static_assert(offsetof(struct task_struct, max_allowed_capacity) == 0x550);
+static_assert(offsetof(struct task_struct, nr_cpus_allowed) == 0x558);
+static_assert(offsetof(struct task_struct, cpus_ptr) == 0x560);
 static_assert(offsetof(struct task_struct, cgroups) == 0xb38);
 static_assert(offsetof(struct task_struct, android_vendor_data1) == 0xcf8);
 static_assert(offsetof(struct task_struct, se) == 0xc0);

@@ -184,25 +184,31 @@ pointer in `ANDROID_KABI_USE(3, ...)` at the end of the struct. Never insert
 it before `slot_id`.
 
 **7. `struct task_struct` must keep the android16-5 vendor layout.**
-`blocked_on_l` was added by `bbb8ae42fd12` after the vendor modules were
-built and sits before `cgroups`, shifting every later field by 16 bytes.
-The prebuilt `scheduler.ko` was compiled against `cgroups` at 0xb38 and
-`android_vendor_data1` at 0xcf8; with the newer layout it read
-`mems_allowed` (value 1) as `p->cgroups` and oopsed from
-`sched_pause_init()` during its own init:
+`blocked_on_l` (`bbb8ae42fd12`) and `is_blocked` (`5265740a12e3`) were
+added after the vendor modules were built and sat before `prio`/`cgroups`:
+
+- `is_blocked` at 0x94 made `cpufreq_sugov_ext` read a normal task as RT
+  (the `p->prio > 99` check) and dereference NULL `min`/`max`:
 
 ```
-Unable to handle kernel NULL pointer dereference at virtual address 0x9
+pc : mtk_effective_cpu_util_total+0x170/0x300 [cpufreq_sugov_ext]
+```
+
+- `blocked_on_l` shifted `cgroups` to 0xb48, so `scheduler.ko` read
+  `mems_allowed` (value 1) as `p->cgroups` during `sched_pause_init()`:
+
+```
 pc : mtk_find_energy_efficient_cpu+0x17c/0x29c4 [scheduler]
 ```
 
-`blocked_on_l` is kernel-internal, so it lives in the KABI tail in
-`include/linux/sched.h`; `__abi_compat_task_pad[0x200]` restores
+Both fields are kernel-internal, so they live in the KABI tail in
+`include/linux/sched.h`; `__abi_compat_task_pad[0x1fc]` keeps
 `sizeof(struct task_struct) == 0x1440`, so `android_task_vendor_data()`
 (p + 1) matches the offset the vendor build uses for its dynamic vendor
-area. `kernel/fork.c` has compile-time asserts for the size, `cgroups`
-and `android_vendor_data1` offsets — keep them passing when the base
-moves.
+area. `kernel/fork.c` asserts the size plus `prio` (0x94),
+`max_allowed_capacity` (0x550), `nr_cpus_allowed` (0x558), `cpus_ptr`
+(0x560), `cgroups` (0xb38) and `android_vendor_data1` (0xcf8) — keep them
+passing when the base moves.
 
 The same applies to `struct sched_entity`: `vprot` (`aedb824ee77d`)
 must sit after `runnable_weight`, not after `vlag`. With the newer order

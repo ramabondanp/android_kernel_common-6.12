@@ -872,7 +872,6 @@ struct task_struct {
 	int				wake_cpu;
 #endif
 	int				on_rq;
-	int				is_blocked;
 
 	int				prio;
 	int				static_prio;
@@ -1666,15 +1665,17 @@ struct task_struct {
 	ANDROID_KABI_RESERVE(8);
 
 	/*
-	 * Android: blocked_on_l is newer than the android16-5 KMI the prebuilt
-	 * MT6895 vendor modules were built against.  Keep it below every field
-	 * those modules dereference so the older offsets are preserved:
-	 * cgroups at 0xb38 and android_vendor_data1 at 0xcf8.  The padding
-	 * keeps sizeof(struct task_struct) at 0x1440, which is the
-	 * android_task_vendor_data() offset the vendor scheduler.ko expects.
+	 * Android: blocked_on_l and is_blocked are newer than the android16-5
+	 * KMI the prebuilt MT6895 vendor modules were built against.  Keep them
+	 * below every field those modules dereference so the older offsets are
+	 * preserved: prio at 0x94, cgroups at 0xb38 and android_vendor_data1
+	 * at 0xcf8.  The padding keeps sizeof(struct task_struct) at 0x1440,
+	 * which is the android_task_vendor_data() offset the vendor
+	 * scheduler.ko expects.
 	 */
 	struct blocked_on_lock		blocked_on_l;
-	u8				__abi_compat_task_pad[0x200];
+	int				is_blocked;
+	u8				__abi_compat_task_pad[0x1fc];
 
 #ifdef CONFIG_RV
 	/*
