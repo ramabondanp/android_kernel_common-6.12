@@ -224,6 +224,27 @@ pc : task_h_load+0x8/0xac [scheduler]
 `kernel/fork.c` asserts `se`, `se.cfs_rq` and `sizeof(struct sched_entity)`
 too.
 
+**8. Keep `CONFIG_BLK_DEV_THROTTLING` off.**
+The vendor build disables it. Enabling it inserts `struct throtl_data *td`
+into `struct request_queue` and moves `mq_freeze_wq` from `0x3b8` to
+`0x3c0`. `ufs_mediatek_mod`'s `rq_timer_fn` wakes that waitqueue directly:
+
+```
+add x0, x8, #0x3b8
+bl  __wake_up
+```
+
+With the shifted field, `x0` points into `request_queue::callback_head`
+and the wakeup path oopses (seen after screen-off/resume):
+
+```
+Unable to handle kernel paging request at virtual address fffffffffffffff8
+pc : __wake_up+0x60/0xd8
+rq_timer_fn+0x40/0x68 [ufs_mediatek_mod]
+```
+
+`gki_defconfig` keeps it off and `block/blk-core.c` asserts the offset.
+
 ## Moving to a newer LTS / AOSP base
 
 Cherry-pick the local fixes onto the new base rather than merging. A merge

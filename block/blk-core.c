@@ -33,6 +33,16 @@
 #include <linux/list_sort.h>
 #include <linux/delay.h>
 #include <linux/ratelimit.h>
+
+#if defined(CONFIG_ARM64)
+/*
+ * Android: the prebuilt MT6895 storage modules (ufs_mediatek_mod's
+ * rq_timer_fn) wake request_queue::mq_freeze_wq at the android16-5
+ * offset.  CONFIG_BLK_DEV_THROTTLING inserts struct throtl_data *td and
+ * moves the field, so it must stay disabled.
+ */
+static_assert(offsetof(struct request_queue, mq_freeze_wq) == 0x3b8);
+#endif
 #include <linux/pm_runtime.h>
 #include <linux/t10-pi.h>
 #include <linux/debugfs.h>
