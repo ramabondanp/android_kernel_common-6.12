@@ -204,6 +204,20 @@ area. `kernel/fork.c` has compile-time asserts for the size, `cgroups`
 and `android_vendor_data1` offsets — keep them passing when the base
 moves.
 
+The same applies to `struct sched_entity`: `vprot` (`aedb824ee77d`)
+must sit after `runnable_weight`, not after `vlag`. With the newer order
+`se.cfs_rq` moved to 0xa8 (`p+0x168`), while the vendor `task_h_load()`
+reads 0xa0 (`p+0x160`) — which is `se.parent`, NULL for a top-level
+task:
+
+```
+Unable to handle kernel NULL pointer dereference at virtual address 0x138
+pc : task_h_load+0x8/0xac [scheduler]
+```
+
+`kernel/fork.c` asserts `se`, `se.cfs_rq` and `sizeof(struct sched_entity)`
+too.
+
 ## Moving to a newer LTS / AOSP base
 
 Cherry-pick the local fixes onto the new base rather than merging. A merge

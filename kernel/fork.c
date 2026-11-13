@@ -138,6 +138,9 @@
 static_assert(sizeof(struct task_struct) == 0x1440);
 static_assert(offsetof(struct task_struct, cgroups) == 0xb38);
 static_assert(offsetof(struct task_struct, android_vendor_data1) == 0xcf8);
+static_assert(offsetof(struct task_struct, se) == 0xc0);
+static_assert(offsetof(struct sched_entity, cfs_rq) == 0xa0);
+static_assert(sizeof(struct sched_entity) == 0x140);
 #endif
 
 /*
