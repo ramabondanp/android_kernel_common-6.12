@@ -1664,19 +1664,6 @@ struct task_struct {
 	ANDROID_KABI_RESERVE(7);
 	ANDROID_KABI_RESERVE(8);
 
-	/*
-	 * Android: blocked_on_l and is_blocked are newer than the android16-5
-	 * KMI the prebuilt MT6895 vendor modules were built against.  Keep them
-	 * below every field those modules dereference so the older offsets are
-	 * preserved: prio at 0x94, cgroups at 0xb38 and android_vendor_data1
-	 * at 0xcf8.  The padding keeps sizeof(struct task_struct) at 0x1440,
-	 * which is the android_task_vendor_data() offset the vendor
-	 * scheduler.ko expects.
-	 */
-	struct blocked_on_lock		blocked_on_l;
-	int				is_blocked;
-	u8				__abi_compat_task_pad[0x1fc];
-
 #ifdef CONFIG_RV
 	/*
 	 * Per-task RV monitor. Nowadays fixed in RV_PER_TASK_MONITORS.
@@ -1705,7 +1692,20 @@ struct task_struct {
 	 * structure.  It *MUST* be at the end of 'task_struct'.
 	 *
 	 * Do not put anything below here!
+	 *
+	 * Android exception (arm64 only): the prebuilt MT6895 vendor modules
+	 * were built against android16-5, whose task_struct has thread at
+	 * 0xda0 (the vendor cpu_switch_to uses `mov x10, #0xda0`).  The
+	 * kernel-internal blocked_on_l and is_blocked are newer than that
+	 * KMI, so keep them below thread to preserve the vendor offset; the
+	 * padding keeps sizeof(struct task_struct) at 0x1440, which is the
+	 * android_task_vendor_data() (p + 1) offset of the vendor build.
+	 * arm64 thread_struct is fixed-size, so the x86 caveat above does
+	 * not apply.
 	 */
+	struct blocked_on_lock		blocked_on_l;
+	int				is_blocked;
+	u8				__abi_compat_task_pad[0x1fc];
 };
 
 #ifdef CONFIG_SCHED_PROXY_EXEC

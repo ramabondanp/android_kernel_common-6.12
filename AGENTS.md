@@ -85,8 +85,9 @@ toolchain/build-tools/bin/pahole -C usb_device out/vmlinux |
 # 7. task_struct / sched_entity must keep the android16-5 offsets the
 #    prebuilt scheduler and cpufreq_sugov_ext modules dereference.
 toolchain/build-tools/bin/pahole -C task_struct out/vmlinux |
-	grep -E '\b(prio|cpus_ptr|cgroups|android_vendor_data1)\b'
-# expect prio 148, cpus_ptr 1376, cgroups 2872, android_vendor_data1 3320
+	grep -E '\b(prio|cpus_ptr|cgroups|android_vendor_data1|thread)\b'
+# expect prio 148, cpus_ptr 1376, cgroups 2872, android_vendor_data1 3320,
+# thread 3488 (0xda0)
 toolchain/build-tools/bin/pahole -C task_struct out/vmlinux | grep 'size:'
 # expect 5184
 toolchain/build-tools/bin/pahole -C sched_entity out/vmlinux |
@@ -225,14 +226,17 @@ pc : mtk_effective_cpu_util_total+0x170/0x300 [cpufreq_sugov_ext]
 pc : mtk_find_energy_efficient_cpu+0x17c/0x29c4 [scheduler]
 ```
 
-Both fields are kernel-internal, so they live in the KABI tail in
+Both fields are kernel-internal, so they live below `thread` in
 `include/linux/sched.h`; `__abi_compat_task_pad[0x1fc]` keeps
 `sizeof(struct task_struct) == 0x1440`, so `android_task_vendor_data()`
 (p + 1) matches the offset the vendor build uses for its dynamic vendor
-area. `kernel/fork.c` asserts the size plus `prio` (0x94),
-`max_allowed_capacity` (0x550), `nr_cpus_allowed` (0x558), `cpus_ptr`
-(0x560), `cgroups` (0xb38) and `android_vendor_data1` (0xcf8) — keep them
-passing when the base moves.
+area. Keeping them below `thread` also preserves the vendor `thread`
+offset: the vendor kernel's `cpu_switch_to` loads `thread.cpu_context`
+with `mov x10, #0xda0`, so `offsetof(struct task_struct, thread)` must
+stay `0xda0`. `kernel/fork.c` asserts the size, `thread` and `prio`
+(0x94), `max_allowed_capacity` (0x550), `nr_cpus_allowed` (0x558),
+`cpus_ptr` (0x560), `cgroups` (0xb38) and `android_vendor_data1`
+(0xcf8) — keep them passing when the base moves.
 
 The same applies to `struct sched_entity`: `vprot` (`aedb824ee77d`)
 must sit after `runnable_weight`, not after `vlag`. With the newer order
