@@ -429,8 +429,6 @@ enum lruvec_flags {
  * this folio is either reclaimed, or "deactivated" by lru_gen_clear_refs(). It
  * can be set again if lru_gen_test_recent() returns true upon a refault.
  */
-#define LRU_REFS_FLAGS		(LRU_REFS_MASK | BIT(PG_referenced))
-
 struct lruvec;
 struct page_vma_mapped_walk;
 
