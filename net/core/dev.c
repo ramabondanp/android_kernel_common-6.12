@@ -165,6 +165,15 @@
 #include "devmem.h"
 #include "net-sysfs.h"
 
+/*
+ * Prebuilt android16-5 network modules inline-access net_device fields.
+ * Keep the vendor layout: watchdog_lock/watchdog_ref_held live in the
+ * KABI reserve slots instead of the middle of the struct.
+ */
+static_assert(sizeof(struct net_device) == 0xa80);
+static_assert(offsetof(struct net_device, proto_down_reason) == 0x514);
+static_assert(offsetof(struct net_device, reg_state) == 0x540);
+
 static DEFINE_SPINLOCK(ptype_lock);
 struct list_head ptype_base[PTYPE_HASH_SIZE] __read_mostly;
 

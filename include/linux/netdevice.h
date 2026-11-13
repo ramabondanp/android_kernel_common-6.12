@@ -2307,8 +2307,6 @@ struct net_device {
 	/* These may be needed for future network-power-down code. */
 	struct timer_list	watchdog_timer;
 	int			watchdog_timeo;
-	spinlock_t		watchdog_lock;
-	bool			watchdog_ref_held;
 
 	u32                     proto_down_reason;
 
@@ -2429,8 +2427,8 @@ struct net_device {
 	/** @irq_moder: dim parameters used if IS_ENABLED(CONFIG_DIMLIB). */
 	struct dim_irq_moder	*irq_moder;
 
-	ANDROID_KABI_RESERVE(1);
-	ANDROID_KABI_RESERVE(2);
+	ANDROID_KABI_USE(1, spinlock_t watchdog_lock);
+	ANDROID_KABI_USE(2, bool watchdog_ref_held);
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);
 	ANDROID_KABI_RESERVE(5);
