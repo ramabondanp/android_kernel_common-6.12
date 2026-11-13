@@ -984,12 +984,17 @@ static inline void qdisc_qstats_cpu_requeues_inc(struct Qdisc *sch)
 
 static inline void __qdisc_qstats_drop(struct Qdisc *sch, int count)
 {
-	sch->qstats.drops += count;
+	WRITE_ONCE(sch->qstats.drops, sch->qstats.drops + count);
 }
 
 static inline void qstats_drop_inc(struct gnet_stats_queue *qstats)
 {
-	qstats->drops++;
+	WRITE_ONCE(qstats->drops, qstats->drops + 1);
+}
+
+static inline void qstats_cpu_drop_inc(struct gnet_stats_queue __percpu *qstats)
+{
+	this_cpu_inc(qstats->drops);
 }
 
 static inline void qstats_overlimit_inc(struct gnet_stats_queue *qstats)
@@ -1326,6 +1331,14 @@ static inline int qdisc_drop(struct sk_buff *skb, struct Qdisc *sch,
 	qdisc_qstats_drop(sch);
 
 	return NET_XMIT_DROP;
+}
+
+static inline int qdisc_drop_reason(struct sk_buff *skb, struct Qdisc *sch,
+				    struct sk_buff **to_free,
+				    enum skb_drop_reason reason)
+{
+	tcf_set_drop_reason(skb, reason);
+	return qdisc_drop(skb, sch, to_free);
 }
 
 static inline int qdisc_drop_all(struct sk_buff *skb, struct Qdisc *sch,
