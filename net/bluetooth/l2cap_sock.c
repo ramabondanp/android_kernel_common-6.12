@@ -1511,7 +1511,7 @@ static struct l2cap_chan *l2cap_sock_new_connection_cb(struct l2cap_chan *chan)
 
 	if (parent->sk_state != BT_LISTEN) {
 		release_sock(parent);
-		return -EINVAL;
+		return NULL;
 	}
 
 	/* Check for backlog size */
