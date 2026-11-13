@@ -43,6 +43,13 @@
 #include "scsi_priv.h"
 #include "scsi_logging.h"
 
+/*
+ * The prebuilt android16-5 ufs-mediatek-mod driver derives its private
+ * data from shost_priv(), so hostdata must stay at the vendor offset.
+ */
+static_assert(sizeof(struct Scsi_Host) == 0x9a8);
+static_assert(offsetof(struct Scsi_Host, hostdata) == 0x9a8);
+
 
 static int shost_eh_deadline = -1;
 
@@ -343,7 +350,6 @@ static void scsi_host_dev_release(struct device *dev)
 	/* Wait for functions invoked through call_rcu(&scmd->rcu, ...) */
 	rcu_barrier();
 
-	cancel_work_sync(&shost->eh_work);
 	if (shost->tmf_work_q)
 		destroy_workqueue(shost->tmf_work_q);
 	if (shost->ehandler)
@@ -409,7 +415,6 @@ struct Scsi_Host *scsi_host_alloc(const struct scsi_host_template *sht, int priv
 	INIT_LIST_HEAD(&shost->starved_list);
 	init_waitqueue_head(&shost->host_wait);
 	mutex_init(&shost->scan_mutex);
-	INIT_WORK(&shost->eh_work, scsi_rcu_eh_wakeup);
 
 	index = ida_alloc(&host_index_ida, GFP_KERNEL);
 	if (index < 0) {
