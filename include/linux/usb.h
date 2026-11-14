@@ -1190,6 +1190,11 @@ static inline int usb_make_path(struct usb_device *dev, char *buf, size_t size)
 /* Stuff for dynamic usb ids */
 extern struct mutex usb_dynids_lock;
 struct usb_dynids {
+	/*
+	 * Preserve the android16-5 layout embedded in prebuilt USB drivers.
+	 * This slot is unused; dynamic IDs are protected by usb_dynids_lock.
+	 */
+	spinlock_t __abi_compat_lock;
 	struct list_head list;
 };
 

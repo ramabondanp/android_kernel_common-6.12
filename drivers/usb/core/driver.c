@@ -36,6 +36,14 @@
 
 #include <trace/hooks/usb.h>
 
+/* Prebuilt android16-5 drivers embed usb_dynids before their driver and flags. */
+static_assert(sizeof(struct usb_dynids) == 24);
+static_assert(offsetof(struct usb_dynids, list) == 8);
+static_assert(offsetof(struct usb_driver, dynids) == 96);
+static_assert(offsetof(struct usb_driver, driver) == 120);
+static_assert(offsetof(struct usb_driver, __kabi_reserved1) == 304);
+static_assert(sizeof(struct usb_driver) == 336);
+
 /*
  * Adds a new dynamic USBdevice ID to this driver,
  * and cause the driver to probe for all devices again.
