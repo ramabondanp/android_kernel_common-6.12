@@ -842,6 +842,14 @@ struct scx_rq {
 	struct scx_dispatch_q	local_dsq;
 	struct list_head	runnable_list;		/* runnable tasks on this rq */
 	struct list_head	ddsp_deferred_locals;	/* deferred ddsps from enq */
+	/*
+	 * Android ABI: 6.12.117 moved ops_qseq into sched_ext_entity,
+	 * removing eight bytes here and shifting rq->curr from 0xd10 to
+	 * 0xd08.  The prebuilt android16-5 scheduler module reads curr at
+	 * 0xd10 (and all later rq fields eight bytes higher), so keep the
+	 * slot reserved.
+	 */
+	unsigned long		__abi_pad;
 	u64			extra_enq_flags;	/* see move_task_to_local_dsq() */
 	u32			nr_running;
 	u32			flags;
