@@ -146,6 +146,15 @@ static_assert(offsetof(struct task_struct, android_vendor_data1) == 0xcf8);
 static_assert(offsetof(struct task_struct, se) == 0xc0);
 static_assert(offsetof(struct sched_entity, cfs_rq) == 0xa0);
 static_assert(sizeof(struct sched_entity) == 0x140);
+
+/* Prebuilt memory/performance monitors read the signal OOM fields directly. */
+static_assert(offsetof(struct signal_struct, oom_score_adj) == 954);
+static_assert(offsetof(struct signal_struct, oom_score_adj_min) == 956);
+static_assert(offsetof(struct signal_struct, oom_mm) == 960);
+static_assert(offsetof(struct signal_struct, cred_guard_mutex) == 968);
+static_assert(offsetof(struct signal_struct, exec_update_lock) == 1016);
+static_assert(offsetof(struct signal_struct, cgroup_threadgroup_rwsem) == 1120);
+static_assert(sizeof(struct signal_struct) == 1184);
 #endif
 
 /*

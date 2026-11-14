@@ -226,10 +226,6 @@ struct signal_struct {
 	struct tty_audit_buf *tty_audit_buf;
 #endif
 
-#ifdef CONFIG_CGROUPS
-	struct rw_semaphore cgroup_threadgroup_rwsem;
-#endif
-
 	/*
 	 * Thread is the potential origin of an oom condition; kill first on
 	 * oom
@@ -257,6 +253,15 @@ struct signal_struct {
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);
 	ANDROID_OEM_DATA(1);
+
+#ifdef CONFIG_CGROUPS
+	/*
+	 * Keep the android16-5 prefix: prebuilt memory/performance modules
+	 * read oom_score_adj at 0x3ba. This kernel-private semaphore does
+	 * not fit in the KABI reserves, so place it after the vendor fields.
+	 */
+	struct rw_semaphore cgroup_threadgroup_rwsem;
+#endif
 } __randomize_layout;
 
 /*
