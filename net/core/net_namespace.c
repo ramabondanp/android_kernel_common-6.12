@@ -27,6 +27,11 @@
 #include <net/net_namespace.h>
 #include <net/netns/generic.h>
 
+/* Prebuilt android16-5 GKI modules provide their own pernet ops tables. */
+static_assert(offsetof(struct pernet_operations, id) == 56);
+static_assert(offsetof(struct pernet_operations, size) == 64);
+static_assert(sizeof(struct pernet_operations) == 72);
+
 /*
  *	Our network namespace constructor/destructor lists
  */
