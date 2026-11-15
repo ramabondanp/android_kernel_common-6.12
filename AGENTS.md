@@ -55,6 +55,28 @@ Notes that are easy to get wrong:
 All checks are cheap and should be re-run after any rebase or toolchain
 change. Exact expected values are the invariants in the next section.
 
+Use the repository's reusable verifier first; do not recreate it under a
+session-specific temporary directory:
+
+```sh
+python3 scripts/x6871/verify_abi.py
+python3 -m unittest discover -s scripts/x6871 -p 'test_*.py' -v
+```
+
+It checks linked BTF layouts/bitfields, required configuration, compatibility
+exports, source contracts, MKP fixmap disassembly and raw Image identity.
+The default JSON report is `out/x6871-abi-report.json`. Failures return a
+nonzero exit code; optional checks without inputs are explicitly skipped.
+
+For stock layout/prototype comparisons, module SHA256 integrity and cross-base
+regression detection, supply external artifacts with `--stock-btf`,
+`--baseline-btf`, `--baseline-config`, `--modules-dir` and `--module-hashes`.
+See `scripts/x6871/README.md` for setup and limits. Never add firmware binaries
+or vendor modules to the repository. These tooling/documentation-only changes
+do not require a new kernel Image.
+
+The following manual checks remain useful when diagnosing a verifier failure:
+
 ```sh
 # 1. struct request must stay 0x120 (288) for the gen5 storage stack
 bpftool btf dump file out/vmlinux format raw | grep -m1 "STRUCT 'request'"
@@ -541,9 +563,11 @@ matching disassembly verifies the layout, not the hypervisor's behavior.
    and lifetime fixes where possible. Add layout assertions and a check
    that fails against the pre-fix headers, then verify the linked result.
 
-Temporary audit scripts and downloaded binaries are not repo prerequisites.
-Preserve the reasoning, expected offsets and reproducible checks in commits
-or this file; do not rely on a session's `/tmp/opencode` files surviving.
+The reusable audit implementation and synthetic tests live in
+`scripts/x6871/`. Downloaded firmware binaries are external optional inputs,
+not repo prerequisites. Preserve new reasoning, expected offsets and regression
+tests there or in commits/this file; do not rely on a session's temporary
+files surviving. Extend the existing verifier instead of forking another copy.
 
 ### Remaining audit watchpoints, not proven runtime failures
 
