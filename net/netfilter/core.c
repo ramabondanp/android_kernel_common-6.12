@@ -28,6 +28,15 @@
 
 #include "nf_internals.h"
 
+/* Prebuilt android16-5 modules pass arrays of this vendor-visible type. */
+static_assert(sizeof(struct nf_hook_ops) == 40);
+static_assert(offsetof(struct nf_hook_ops, hook) == 0);
+static_assert(offsetof(struct nf_hook_ops, dev) == 8);
+static_assert(offsetof(struct nf_hook_ops, priv) == 16);
+static_assert(offsetof(struct nf_hook_ops, pf) == 24);
+static_assert(offsetof(struct nf_hook_ops, hooknum) == 28);
+static_assert(offsetof(struct nf_hook_ops, priority) == 32);
+
 const struct nf_ipv6_ops __rcu *nf_ipv6_ops __read_mostly;
 EXPORT_SYMBOL_GPL(nf_ipv6_ops);
 
