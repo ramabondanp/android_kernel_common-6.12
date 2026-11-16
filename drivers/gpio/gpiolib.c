@@ -44,6 +44,14 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gpio.h>
 
+/*
+ * Prebuilt android16-5 pinctrl modules embed struct gpio_chip in their
+ * private allocation. Keep its size and the fields gpiolib writes fixed.
+ */
+static_assert(sizeof(struct gpio_chip) == 0x278);
+static_assert(offsetof(struct gpio_chip, set_config) == 0x70);
+static_assert(offsetof(struct gpio_chip, irq) == 0x120);
+
 /* Implementation infrastructure for GPIO interfaces.
  *
  * The GPIO programming interface allows for inlining speed-critical

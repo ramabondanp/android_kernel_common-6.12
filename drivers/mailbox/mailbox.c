@@ -21,6 +21,10 @@
 
 #include "mailbox.h"
 
+/* Prebuilt android16-5 controllers allocate arrays with this layout. */
+static_assert(sizeof(struct mbox_chan) == 248);
+static_assert(offsetof(struct mbox_chan, active_req) == 56);
+
 static LIST_HEAD(mbox_cons);
 static DEFINE_MUTEX(con_mutex);
 

@@ -103,6 +103,14 @@
 #include <trace/hooks/dtask.h>
 #include <trace/hooks/blk.h>
 
+/*
+ * The prebuilt android16-5 scheduler module reads rq->curr/idle/stop at
+ * these offsets. Keep them fixed when the sched_ext layout changes.
+ */
+static_assert(offsetof(struct rq, curr) == 0xd10);
+static_assert(offsetof(struct rq, idle) == 0xd20);
+static_assert(offsetof(struct rq, stop) == 0xd28);
+
 EXPORT_TRACEPOINT_SYMBOL_GPL(ipi_send_cpu);
 EXPORT_TRACEPOINT_SYMBOL_GPL(ipi_send_cpumask);
 

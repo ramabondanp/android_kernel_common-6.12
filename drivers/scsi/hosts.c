@@ -43,6 +43,13 @@
 #include "scsi_priv.h"
 #include "scsi_logging.h"
 
+/*
+ * The prebuilt android16-5 ufs-mediatek-mod driver derives its private
+ * data from shost_priv(), so hostdata must stay at the vendor offset.
+ */
+static_assert(sizeof(struct Scsi_Host) == 0x9a8);
+static_assert(offsetof(struct Scsi_Host, hostdata) == 0x9a8);
+
 
 static int shost_eh_deadline = -1;
 

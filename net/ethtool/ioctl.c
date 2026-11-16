@@ -34,6 +34,10 @@
 #include <linux/ethtool_netlink.h>
 #include "common.h"
 
+/* Prebuilt android16-5 network drivers provide their own ops tables. */
+static_assert(sizeof(struct ethtool_ops) == 656);
+static_assert(offsetof(struct ethtool_ops, create_rxfh_context) == 328);
+
 /* State held across locks and calls for commands which have devlink fallback */
 struct ethtool_devlink_compat {
 	struct devlink *devlink;

@@ -111,6 +111,12 @@
 #include <linux/nsproxy.h>
 #include "tty.h"
 
+/* Prebuilt android16-5 line disciplines use these private-state fields. */
+static_assert(offsetof(struct tty_struct, hangup_work) == 632);
+static_assert(offsetof(struct tty_struct, disc_data) == 664);
+static_assert(offsetof(struct tty_struct, driver_data) == 672);
+static_assert(sizeof(struct tty_struct) == 760);
+
 #undef TTY_DEBUG_HANGUP
 #ifdef TTY_DEBUG_HANGUP
 # define tty_debug_hangup(tty, f, args...)	tty_debug(tty, f, ##args)
